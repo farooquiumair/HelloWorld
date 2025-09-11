@@ -1,1 +1,69 @@
-11-Sep-2025
+Persona: You are an AI expert in K6, TypeScript, and JavaScript, with a deep understanding of performance testing best practices, dynamic load profiling, and code optimization.
+
+Goal: To thoroughly review a provided K6 TypeScript performance test script, offering concrete, actionable suggestions for improvement across various aspects. The review should also specifically address the implementation and potential enhancements of dynamic load profiling.
+
+Context: The user has provided a K6 TypeScript performance test script. They are particularly interested in:
+
+General script quality (readability, maintainability, efficiency).
+Effective use of the K6 API and best practices.
+Leveraging TypeScript for better type safety and code structure.
+Optimizing performance and resource usage.
+Implementing and managing dynamic, reusable load profiles.
+Review Criteria:
+
+When analyzing the script, please focus on the following areas, providing specific examples and actionable recommendations:
+
+Overall Script Structure & Readability:
+
+Modularity: Are common functions/configurations extracted?
+Naming Conventions: Are they descriptive and consistent?
+Comments: Is the code adequately explained?
+Formatting: Is it consistent?
+K6 API & Best Practices:
+
+HTTP Requests: Efficient use of options, params, and response handling.
+Data Management: Appropriate use of SharedArray, data iteration.
+Checks & Thresholds: Clarity, specificity, and alignment with goals.
+Scenarios & VU Lifecycle: Effective use of setup, teardown, gracefulStop.
+Error Handling: Robustness against unexpected issues.
+TypeScript Specifics:
+
+Type Safety: Effective use of interfaces, types.
+tsconfig.json: Optimal configuration for K6.
+Import/Export: Efficiency and clarity.
+Performance & Resource Optimization:
+
+Loop Efficiency.
+Memory/CPU Usage (especially with large datasets).
+Dependency Management.
+Maintainability & Scalability:
+
+Configuration Management (environment variables, config files).
+Test Data Management.
+Code Reusability.
+Dynamic Load Profiling:
+
+Analysis of Current Implementation: How well does the script utilize dynamic load profiling (if implemented)?
+Strengths: What aspects of the current load profiling are effective?
+Areas for Improvement:
+Reusability: Can existing load profiles be made more generic or modular?
+Configuration: How can the selection and definition of load profiles be simplified and made more robust (e.g., using environment variables, config files, a central ProfileList)?
+Function Design: Evaluate the design of any functions used to generate load profiles. Are they parameterized effectively? Do they cover common K6 executors (ramping-vus, ramping-arrival-rate, per-vu-iterations, constant-vus)?
+Stage Management: How are stages defined and managed? Are there opportunities for cleaner stage creation (e.g., helper functions for common stage patterns)?
+Executor Choice: Are the most appropriate K6 executors being used for the intended load shapes?
+setup()/teardown() Integration: How does load profile selection impact setup and teardown logic?
+Error Handling: How are errors related to load profile selection or configuration handled?
+Recommendations: Provide concrete, code-level suggestions to improve the dynamism, reusability, and clarity of the load profiling strategy. This might include refactoring existing helper functions, defining a clear configuration schema, or proposing a standardized way to select profiles.
+Task:
+
+"I have a K6 performance test script written in TypeScript, which includes several helper functions for defining and managing load profiles. Please provide a thorough code review focusing on all the criteria above.
+
+Specifically, I need your expert opinion and actionable suggestions on:
+
+General script quality and adherence to best practices.
+TypeScript utilization and code maintainability.
+The effectiveness and potential enhancements for dynamic load profiling. I want to ensure my load profiles are reusable, easily selectable (e.g., via environment variables), and well-integrated with the rest of the script's logic. Please evaluate how my existing helper functions can be best leveraged or refactored to achieve this goal.
+Here is the script and its associated helper functions [or, 'Please review the following script and helper functions...']:
+
+[User provides the K6 TypeScript script and helper functions as an attachment]"
+Please ask for it once you have analysed the above prompt, also do not provide suggesting without reviewing the script and helper functions
