@@ -1,0 +1,251 @@
+/**
+ * @file This module provides a powerful, configuration-driven utility to generate dynamic
+ * K6 load test scenarios. It allows for creating complex load profiles like 'peak', 'soak',
+ * 'stress', and 'spike' tests by simply setting environment variables, eliminating the need
+ * for large, hardcoded scenario objects.
+ */
+
+import { Scenario } from 'k6/options';
+
+// --- INTERFACES AND TYPES ---
+
+/**
+ * Defines the comprehensive configuration structure used internally to build test stages.
+ * This object is constructed dynamically from environment variables.
+ */
+type TestConfig = {
+  testType: 'peak' | 'soak' | 'spike' | 'stress';
+  
+  // Throughput and Duration
+  signUpTargetThroughput: number;
+  signInTargetThroughput: number;
+  iterationDurationSignUp: number;
+  iterationDurationSignIn: number;
+
+  // Growth Rates (used for calculation)
+  signUpGrowthRate: number;
+  signInGrowthRate: number;
+
+  // Timings
+  steadyStateDuration: number;
+  increments: number; // For stress tests
+  spikeRampUpNFR: number; // For spike tests
+  signUpRampUpDuration: number;
+  signInRampUpDuration: number;
+  signUpRampDownDuration: number;
+  signInRampDownDuration: number;
+};
+
+/** A type alias for a K6 stage object for improved readability. */
+type Stage = { target: number; duration: string };
+
+/** A type alias for the K6 scenarios object. */
+type ScenarioList = Record<string, Scenario>;
+
+// --- HELPER FUNCTIONS ---
+
+/**
+ * Safely retrieves a value from the K6 `__ENV` object.
+ * @param name The name of the environment variable (case-sensitive).
+ * @param defaultValue A fallback value to use if the environment variable is not set.
+ * @returns The environment variable's value or the default.
+ */
+function getEnvValue(name: string, defaultValue?: string | number): string | number | undefined {
+  const envValue = __ENV[name];
+  if (envValue === undefined && defaultValue !== undefined) {
+    console.warn(`[Config] Environment variable '${name}' not found. Using default value: ${defaultValue}`);
+    return defaultValue;
+  }
+  return envValue;
+}
+
+/**
+ * Retrieves an environment variable and ensures it is parsed as a number.
+ * @param name The name of the environment variable.
+ * @param defaultValue The default numeric value to use if the variable is not set.
+ * @returns The parsed numeric value.
+ */
+function getEnvFromConfig(name: string, defaultValue: number): number {
+  const envValue = getEnvValue(name, defaultValue);
+  return parseFloat(String(envValue));
+}
+
+/**
+ * Generates the K6 stages array for a given load profile. This function is the single
+ * source of truth for all stage generation logic, ensuring consistency across test types.
+ * @param config The fully resolved test configuration object.
+ * @param targetThroughput The peak target throughput (iterations/timeUnit) for this scenario.
+ * @param growthRate A factor used in stress test calculations to determine ramp-up speed.
+ * @returns An array of K6 stage objects.
+ */
+function generateStages(
+  // Parameters:
+  config: TestConfig, 
+  targetThroughput: number, 
+  rampUpDuration: number,   // <-- ADD this new parameter
+  rampDownDuration: number, // <-- ADD this new parameter
+  growthRate: number = 0
+): Stage[] {
+  // Now, destructure only what's left in the main config object
+  const { testType, steadyStateDuration, increments, spikeRampUpNFR } = config;
+
+  switch (testType) {
+    case 'stress':
+      const stages: Stage[] = [];
+      const stepThroughput = targetThroughput / increments;
+      // The total steady state duration is divided equally among all the stress increments.
+      const durationPerIncrement = steadyStateDuration / increments;
+
+      console.log(`[Stress Profile] Generating ${increments} steps, each lasting ~${Math.round(durationPerIncrement)}s, up to ${targetThroughput} iter/s.`);
+
+      for (let i = 1; i <= increments; i++) {
+        const currentTarget = Math.round(stepThroughput * i);
+        // Each step has its own small ramp-up and a steady-state period.
+        // We use Math.max(1, ...) to prevent zero-duration stages, which are invalid in K6.
+        const stepRampUpDuration = Math.max(1, Math.round(durationPerIncrement * 0.2)); // 20% of step time for ramp
+        const stepSteadyStateDuration = Math.max(1, durationPerIncrement - stepRampUpDuration);
+
+        stages.push({ target: currentTarget, duration: `${stepRampUpDuration}s` });
+        stages.push({ target: currentTarget, duration: `${stepSteadyStateDuration}s` });
+      }
+      // After reaching the peak, perform a final ramp down.
+      stages.push({ target: 0, duration: `${rampDownDuration}s` });
+      return stages;
+
+    case 'spike':
+      // The base throughput is a fraction of the peak to establish a baseline load.
+      const baseThroughput = Math.round(targetThroughput / 3);
+      const spikeRampUpDuration = Math.max(1, Math.ceil(rampUpDuration / 5));
+
+      console.log(`[Debug] Spike Profile Stages for target=${targetThroughput}:`);
+      console.log(`        - Baseline Target: ${baseThroughput} req/s`);
+      console.log(`        - NFR Ramp-Up: ${rampUpDuration}s`);
+      console.log(`        - Spike Ramp-Up: ${spikeRampUpDuration}s`);
+
+      return [
+        { target: baseThroughput, duration: '4m' }, // Ramp up to baseline
+        { target: baseThroughput, duration: '5m' }, // Maintain baseline to ensure stability
+        { target: targetThroughput, duration: `${spikeRampUpDuration}s` }, // Spike up rapidly to peak load
+        { target: targetThroughput, duration: '5m' }, // Maintain spike load to observe system behavior under pressure
+        { target: baseThroughput, duration: '1s' }, // Recover down almost instantly
+        { target: baseThroughput, duration: '5m' }, // Maintain baseline after recovery to check for lingering issues
+        { target: targetThroughput, duration: `${rampUpDuration}s` },
+        { target: 0, duration: `${rampDownDuration}s` }, // Final graceful ramp-down
+      ];
+
+    case 'peak':
+    case 'soak':
+    default:
+      // The classic load profile: ramp-up, steady-state, ramp-down.
+      // 'soak' tests are achieved by setting a long STEADY_DURATION via environment variables.
+      return [
+        { target: targetThroughput, duration: `${rampUpDuration}s` },
+        { target: targetThroughput, duration: `${steadyStateDuration}s` },
+        { target: 0, duration: `${rampDownDuration}s` },
+      ];
+  }
+}
+
+// --- MAIN EXPORTED FUNCTION ---
+
+/**
+ * The main entry point for creating a dynamic test profile. It takes a simple test type string,
+ * resolves all necessary configuration from environment variables, and constructs the complete
+ * K6 scenarios object.
+ * @param testType A string identifier for the desired load profile: 'peak', 'soak', 'stress', or 'spike'.
+ * @returns A K6 scenarios object ready to be used in the main test script's options.
+ */
+export function createDynamicTestProfile(testType: 'peak' | 'soak' | 'spike' | 'stress'): ScenarioList {
+  // This object resolves the entire configuration from environment variables based on the test type.
+  // For example, if testType is 'peak', it looks for 'PEAK_SIGNIN_TARGET', 'PEAK_RAMP_UP', etc.
+  const baseConfig = {
+    testType: testType,
+    signUpTargetThroughput: getEnvFromConfig(`${testType.toUpperCase()}_SIGNUP_TARGET`, 1),
+    signInTargetThroughput: getEnvFromConfig(`${testType.toUpperCase()}_SIGNIN_TARGET`, 1),
+    iterationDurationSignUp: getEnvFromConfig(`${testType.toUpperCase()}_SIGNUP_ITERATION_DURATION`, 30),
+    iterationDurationSignIn: getEnvFromConfig(`${testType.toUpperCase()}_SIGNIN_ITERATION_DURATION`, 30),
+    steadyStateDuration: getEnvFromConfig(`${testType.toUpperCase()}_STEADY_DURATION`, 300),
+    // Read the growth rates from ENV, with defaults. THIS IS THE SOURCE OF TRUTH.
+    signUpGrowthRate: getEnvFromConfig(`${testType.toUpperCase()}_SIGNUP_GROWTH_RATE`, 2.2),
+    signInGrowthRate: getEnvFromConfig(`${testType.toUpperCase()}_SIGNIN_GROWTH_RATE`, 0.1),
+    // ... other config properties
+    rampDownDuration: getEnvFromConfig(`${testType.toUpperCase()}_RAMP_DOWN`, 60),
+    increments: getEnvFromConfig(`${testType.toUpperCase()}_INCREMENTS`, 6),
+    spikeRampUpNFR: getEnvFromConfig(`${testType.toUpperCase()}_RAMP_UP_NFR`, 30),
+  };
+
+    console.log(`[Debug] Populated baseConfig:\n${JSON.stringify(baseConfig, null, 2)}`);
+
+
+  // Heuristic for Virtual User (VU) allocation based on Little's Law:
+  // Concurrent Users (VUs) ≈ Arrival Rate (iter/sec) * Average Iteration Duration (sec).
+  // We pre-allocate half of the calculated VUs as a starting point and set maxVUs to double,
+  // allowing K6 to scale VUs as needed to meet the target arrival rate.
+
+const calculatedSignUpRampUp = Math.ceil(
+    (baseConfig.signUpTargetThroughput / baseConfig.signUpGrowthRate) + 1
+  );
+
+  const calculatedSignInRampUp = Math.ceil(
+    (baseConfig.signInTargetThroughput / baseConfig.signInGrowthRate) + 1
+  );
+
+const fullConfig: Required<TestConfig> = {
+    ...baseConfig,
+    signUpRampUpDuration: calculatedSignUpRampUp,
+    signInRampUpDuration: calculatedSignInRampUp,
+    // Using a fallback for ramp-down for flexibility
+    signUpRampDownDuration: getEnvFromConfig(`${testType.toUpperCase()}_SIGNUP_RAMP_DOWN`, baseConfig.rampDownDuration),
+    signInRampDownDuration: getEnvFromConfig(`${testType.toUpperCase()}_SIGNIN_RAMP_DOWN`, baseConfig.rampDownDuration),
+  };
+  console.log(`[Debug] Assembled fullConfig:\n${JSON.stringify(fullConfig, null, 2)}`);
+  console.log(`[Profile] FINAL Config for '${testType}':\n${JSON.stringify(fullConfig, null, 2)}`);
+
+
+
+  const preAllocatedVUsSignUp = Math.round(((baseConfig.signUpTargetThroughput / 10) * baseConfig.iterationDurationSignUp) / 2);
+  console.log(
+    `[Debug] VU Calc (SignUp): Math.round(((${fullConfig.signUpTargetThroughput} target / 10) * ${fullConfig.iterationDurationSignUp}s duration) / 2) = ${preAllocatedVUsSignUp} VUs`
+  );
+  const preAllocatedVUsSignIn = Math.round((baseConfig.signInTargetThroughput * baseConfig.iterationDurationSignIn) / 2);
+
+  console.log(
+    `[Debug] VU Calc (SignIn): Math.round((${fullConfig.signInTargetThroughput} target * ${fullConfig.iterationDurationSignIn}s duration) / 2) = ${preAllocatedVUsSignIn} VUs`
+  );
+
+
+  const scenarios: ScenarioList = {
+    signUp: {
+      executor: 'ramping-arrival-rate',
+      exec: 'signUp',
+      startRate: 1,
+      timeUnit: '10s',
+      preAllocatedVUs: Math.max(2, preAllocatedVUsSignUp),
+      maxVUs: Math.max(10, preAllocatedVUsSignUp * 2),
+      stages: generateStages(
+        fullConfig,                         // Argument 1: config
+        fullConfig.signUpTargetThroughput,  // Argument 2: targetThroughput
+        fullConfig.signUpRampUpDuration,    // Argument 3: rampUpDuration (NEW)
+        fullConfig.signUpRampDownDuration,  // Argument 4: rampDownDuration (NEW)
+        fullConfig.signUpGrowthRate         // Argument 5: growthRate
+      ),
+    },
+    signIn: {
+      executor: 'ramping-arrival-rate',
+      exec: 'signIn',
+      startRate: 2,
+      timeUnit: '1s',
+      preAllocatedVUs: Math.max(5, preAllocatedVUsSignIn),
+      maxVUs: Math.max(20, preAllocatedVUsSignIn * 2),
+      stages: generateStages(
+        fullConfig,                         // Argument 1: config
+        fullConfig.signInTargetThroughput,  // Argument 2: targetThroughput
+        fullConfig.signInRampUpDuration,    // Argument 3: rampUpDuration (NEW)
+        fullConfig.signInRampDownDuration,  // Argument 4: rampDownDuration (NEW)
+        fullConfig.signInGrowthRate         // Argument 5: growthRate
+      ),
+    },
+  };
+
+  return scenarios;
+}
