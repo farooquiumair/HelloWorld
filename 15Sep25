@@ -1149,3 +1149,21 @@ export function signIn(): void {
   })
   iterationsCompleted.add(1)
 }
+
+
+
+
+-----------
+Instead of hardcoding ramp-up durations for sign-up and sign-in tests, we'll use a formula: Ramp-up time = (Target Throughput / Growth Rate) + 1.
+Sign-up: Growth rate = 0.1. The final target throughput is 960 (note actual is 96 since timeunit is 10 hence it is 960).
+Stage 1 (Ramp-up): Target throughput = 960/6 = 160; Ramp-up time = (16/0.1) + 1 = 161 seconds.
+Stage 2 (Steady state): Target throughput = 160; Duration = 300 seconds.(i.e. 461-161)
+Stage 3 (Ramp-up): Target throughput = 320; Ramp-up time = 161 seconds.
+Stage 4 (Steady state): Target throughput = 320; Duration = 300 seconds.(i.e. 461-161)
+so on and so forth until the last stage where the target throughput is 96
+Sign-in: Growth rate = 2.2. The final target throughput is 144.
+Stage 1 (Ramp-up): Target throughput = 144/6 = 24; Ramp-up time = (24/2.2) + 1 = ~12 seconds.
+Stage 2 (Steady state): Target throughput = 24; Duration = 449 seconds (461 - 12).
+Stage 3 (Ramp-up): Target throughput = 48; Ramp-up time = ~12 seconds.
+Stage 4 (Steady state): Target throughput = 48; Duration = 449 seconds. (461 - 12).
+Each sign-up and sign-in test will have a total duration of 461 seconds (one ramp-up and one steady-state period), ensuring both start simultaneously. The steady-state durations are adjusted to achieve this.
