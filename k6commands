@@ -1,0 +1,66 @@
+k6 commands
+Peak test: 
+k6 run ./dist/authentication/test.js -e TEST_TYPE=peak -e PEAK_SIGNUP_TARGET=10 -e PEAK_SIGNUP_RAMP_UP=10 -e PEAK_SIGNUP_ITERATION_DURATION=10 -e PEAK_SIGNIN_TARGET=10 -e PEAK_SIGNIN_RAMP_UP=10 -e PEAK_SIGNIN_ITERATION_DURATION=10 -e PEAK_STEADY_DURATION=60 -e PEAK_RAMP_DOWN=10 -e ACCOUNT_RP_STUB=https://rp-stub.perf.staging.account.gov.uk  -e ACCOUNT_STAGING_URL=https://signin.staging.account.gov.uk -e ACCOUNT_APP_PASSWORD=PerfPass@1234! -e ACCOUNT_EMAIL_OTP=112763 -e ACCOUNT_PHONE_OTP=599637 -e ACCOUNT_OP_URL=https://oidc.staging.account.gov.uk/authorize -e ACCOUNT_RP_STUB_CLIENT_ID=LYzplib5rmVvT0hFszVsiEsUc2w0aA1x -e ACCOUNT_APP_KEY=ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ  -e ROUTE=RP
+
+
+SignUp
+Throughput = 10 ( actual target is 1)
+Ramp-up = 10
+Iteration duration = 10
+PEAK_STEADY_DURATION=60
+PEAK_RAMP_DOWN=10
+Total duration = 10+60+10=120
+maxvuser = 10/10 * 10 = 10 //Math.round((target / 10) * iterationDuration)
+preAllocatedVUs = 10/2 = 5 //maxvuser/2
+
+
+
+SignIn
+Throughput = 10 ( actual target is 47)
+Ramp-up = 10
+Iteration duration = 10
+PEAK_STEADY_DURATION=60
+PEAK_RAMP_DOWN=10
+Total duration = 10+60+10=120
+maxvuser = 10*10 = 100 //target * iterationDuration
+preAllocatedVUs = maxVUs/2 = 100/2 = 50 //maxVUs/2
+    
+
+Spike test:
+k6 run ./dist/authentication/test.js -e TEST_TYPE=spike -e SPIKE_SIGNUP_TARGET=30 -e SPIKE_SIGNUP_RAMP_UP=50 -e SPIKE_SIGNUP_ITERATION_DURATION=10 -e SPIKE_SIGNIN_TARGET=30 -e SPIKE_SIGNIN_RAMP_UP=50 -e SPIKE_SIGNIN_ITERATION_DURATION=10 -e SPIKE_STEADY_DURATION=60 -e SPIKE_RAMP_DOWN=10 -e ACCOUNT_RP_STUB=https://rp-stub.perf.staging.account.gov.uk  -e ACCOUNT_STAGING_URL=https://signin.staging.account.gov.uk -e ACCOUNT_APP_PASSWORD=PerfPass@1234! -e ACCOUNT_EMAIL_OTP=112763 -e ACCOUNT_PHONE_OTP=599637 -e ACCOUNT_OP_URL=https://oidc.staging.account.gov.uk/authorize -e ACCOUNT_RP_STUB_CLIENT_ID=LYzplib5rmVvT0hFszVsiEsUc2w0aA1x -e ACCOUNT_APP_KEY=ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ  -e ROUTE=RP
+
+
+
+
+
+
+
+
+
+
+
+Stress test
+k6 run ./dist/authentication/test.js -e TEST_TYPE=stress -e STRESS_SIGNUP_TARGET=960 -e STRESS_SIGNUP_ITERATION_DURATION=10 -e STRESS_SIGNIN_TARGET=144 -e STRESS_SIGNIN_ITERATION_DURATION=10 -e STRESS_RAMP_DOWN=10 -e ACCOUNT_RP_STUB=https://rp-stub.perf.staging.account.gov.uk  -e ACCOUNT_STAGING_URL=https://signin.staging.account.gov.uk -e ACCOUNT_APP_PASSWORD=PerfPass@1234! -e ACCOUNT_EMAIL_OTP=112763 -e ACCOUNT_PHONE_OTP=599637 -e ACCOUNT_OP_URL=https://oidc.staging.account.gov.uk/authorize -e ACCOUNT_RP_STUB_CLIENT_ID=LYzplib5rmVvT0hFszVsiEsUc2w0aA1x -e ACCOUNT_APP_KEY=ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ  -e ROUTE=RP
+
+
+SignUp
+Throughput = 960 ( actual target is 96)
+Ramp-up = 10
+Iteration duration = 10
+PEAK_STEADY_DURATION=60
+PEAK_RAMP_DOWN=10
+Total duration = 10+60+10=120
+maxvuser = 10/10 * 10 = 10 //Math.round((target / 10) * iterationDuration)
+preAllocatedVUs = 10/2 = 5 //maxvuser/2
+
+
+
+SignIn
+Throughput = 10 ( actual target is 47)
+Ramp-up = 10
+Iteration duration = 10
+PEAK_STEADY_DURATION=60
+PEAK_RAMP_DOWN=10
+Total duration = 10+60+10=120
+maxvuser = 10*10 = 100 //target * iterationDuration
+preAllocatedVUs = maxVUs/2 = 100/2 = 50 //maxVUs/2
