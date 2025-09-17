@@ -149,3 +149,24 @@ Why are these changes being made?
 ### Related:
 - [Link]() to any relevant documentation or relevant pull requests
 - Delete this section if not needed
+
+
+
+---------
+QA-1253
+What?
+This pull request enhances the dynamic load testing framework by introducing a new stress test profile and improving the logic for all existing test types.
+
+Changes:
+Stress Test: Implemented a new, configurable stress profile that accurately generates stepped load patterns with predictable ramp-up and steady-state durations.
+Spike Test: Corrected the spike profile to execute a single, clean spike-and-recover sequence by removing redundant stages.
+Peak & Soak Tests: Standardized the peak and soak profiles to ensure robust, classic load testing patterns.
+Configuration: Aligned default configuration values to reflect current performance testing requirements.
+Why?
+The previous implementation generated incorrect load patterns for stress and spike tests, preventing the accurate measurement of system behavior under these specific conditions.
+
+This update ensures that all generated load profiles are predictable, reliable, and correctly model their intended scenarios, leading to more trustworthy performance test results.
+
+Related:
+Link [blocked] to performance testing strategy documentation.
+Delete this section if not needed
