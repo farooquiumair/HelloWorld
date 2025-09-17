@@ -122,3 +122,30 @@ Here is the original requirement
     *   Ramp-up Duration: (48 / 2.2) + 1 ≈ 22.8 seconds, rounded to 23 seconds (Correction: Based on the provided example, it seems the calculation implies (previous\_steady\_state\_throughput / growth\_rate) + 1, so 12 seconds might be the intended duration if the ramp-up calculation logic is strictly followed for the second increment as well.)
     *   Steady-State Throughput: 48
     *   Steady-State Duration: 461 - 12 = 449 seconds (Assuming ramp-up duration is consistently 12 seconds as in the first increment example.)
+
+
+
+
+
+
+
+
+PR format
+## QA-XXX <!--Jira Ticket Number-->
+
+### What?
+Add an overview of what this pull request changes
+
+#### Changes:
+- Detail individual changes in bullet points
+
+---
+
+### Why?
+Why are these changes being made?
+
+---
+
+### Related:
+- [Link]() to any relevant documentation or relevant pull requests
+- Delete this section if not needed
